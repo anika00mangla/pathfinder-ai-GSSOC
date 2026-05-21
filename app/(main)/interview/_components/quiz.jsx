@@ -9,6 +9,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
+  CardDescription,
 } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -17,11 +18,34 @@ import QuizResult from "./quiz-result";
 import useFetch from "@/hooks/use-fetch";
 import { BarLoader } from "react-spinners";
 import { Loader2 } from "lucide-react"; // Imported for the inline spinner
+import { Code, Users, Lightbulb } from "lucide-react";
+
+const CATEGORIES = [
+  {
+    id: "Technical",
+    label: "Technical",
+    description: "Coding, data structures, algorithms",
+    icon: Code,
+  },
+  {
+    id: "Behavioral",
+    label: "Behavioral",
+    description: "Teamwork, leadership, communication",
+    icon: Users,
+  },
+  {
+    id: "Situational",
+    label: "Situational",
+    description: "Hypothetical scenarios, decision-making",
+    icon: Lightbulb,
+  },
+];
 
 export default function Quiz() {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("Technical");
 
   const {
     loading: generatingQuiz,
@@ -70,7 +94,7 @@ export default function Quiz() {
   const finishQuiz = async () => {
     const score = calculateScore();
     try {
-      await saveQuizResultFn(quizData, answers, score);
+      await saveQuizResultFn(quizData, answers, score, selectedCategory);
       toast.success("Quiz completed!");
     } catch (error) {
       toast.error(error.message || "Failed to save quiz results");
@@ -81,7 +105,7 @@ export default function Quiz() {
     setCurrentQuestion(0);
     setAnswers([]);
     setShowExplanation(false);
-    generateQuizFn();
+    generateQuizFn(selectedCategory);
     setResultData(null);
   };
 
@@ -103,16 +127,48 @@ export default function Quiz() {
       <Card className="mx-2">
         <CardHeader>
           <CardTitle>Ready to test your knowledge?</CardTitle>
+          <CardDescription>
+            Choose a category and start your interview practice
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">
-            This quiz contains 10 questions specific to your industry and
-            skills. Take your time and choose the best answer for each question.
-          </p>
+        <CardContent className="space-y-4">
+          {/* Category selector */}
+          <div className="space-y-3">
+            {CATEGORIES.map((cat) => {
+              const Icon = cat.icon;
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedCategory === cat.id
+                      ? "border-primary bg-primary/5"
+                      : "border-muted hover:bg-muted/50"
+                  }`}
+                >
+                  <div
+                    className={`shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
+                      selectedCategory === cat.id
+                        ? "bg-primary/10 text-primary"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm">{cat.label}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {cat.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
         <CardFooter>
-          <Button onClick={generateQuizFn} className="w-full">
-            Start Quiz
+          <Button onClick={() => generateQuizFn(selectedCategory)} className="w-full">
+            Start {selectedCategory} Quiz
           </Button>
         </CardFooter>
       </Card>
@@ -124,8 +180,11 @@ export default function Quiz() {
   return (
     <Card className="mx-2">
       <CardHeader>
-        <CardTitle>
-          Question {currentQuestion + 1} of {quizData.length}
+        <CardTitle className="flex items-center justify-between">
+          <span>Question {currentQuestion + 1} of {quizData.length}</span>
+          <span className="text-xs font-normal text-muted-foreground px-2 py-1 bg-muted rounded-full">
+            {selectedCategory}
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -163,9 +222,11 @@ export default function Quiz() {
         <Button
           onClick={handleNext}
           disabled={!answers[currentQuestion] || savingResult}
-          className="ml-auto flex items-center justify-center gap-2"
+          className="ml-auto"
         >
-          {savingResult && <Loader2 className="h-4 w-4 animate-spin" />}
+          {savingResult && (
+            <BarLoader className="mt-4" width={"100%"} color="gray" />
+          )}
           {currentQuestion < quizData.length - 1
             ? "Next Question"
             : "Finish Quiz"}

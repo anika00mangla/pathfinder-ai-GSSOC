@@ -8,13 +8,12 @@ import { validateInput } from "@/lib/validate";
 import { atsAnalysisSchema } from "@/lib/schemas/forms";
 
 /**
- * Runs an ATS analysis using Gemini AI and persists the result.
+ * Runs an ATS analysis using Gemini AI and persists the result safely.
  */
 export async function analyzeATS(rawParams) {
   const { userId } = await auth();
   if (!userId) return { success: false, errors: { _form: ["Sign-in required to scan applications."] } };
 
-  // Run through sanitization and bounds parsing before any AI or DB invocation
   const validation = validateInput(atsAnalysisSchema, rawParams);
   if (!validation.success) return { success: false, errors: validation.errors };
 
@@ -27,7 +26,6 @@ export async function analyzeATS(rawParams) {
 
   const prompt = `
 You are an expert ATS (Applicant Tracking System) analyst and career coach.
-
 Analyze the following resume against the job description and return a detailed ATS compatibility report.
 
 RESUME:
@@ -39,10 +37,10 @@ ${jobDescription}
 Provide your analysis in the following JSON format ONLY — no extra text, no markdown fences:
 {
   "atsScore": <number between 0 and 100>,
-  "matchedKeywords": [<array of keywords/skills/phrases found in BOTH the resume and job description>],
-  "missingKeywords": [<array of important keywords/skills/phrases in the job description that are missing from the resume>],
-  "suggestions": [<array of practical, actionable points to improve the resume for this position>],
-  "overallFeedback": "string highlighting overall strengths and key gaps"
+  "matchedKeywords": [<array of keywords found in both>],
+  "missingKeywords": [<array of key missing keywords>],
+  "suggestions": [<array of practical improvements>],
+  "overallFeedback": "string highlighting strengths and gaps"
 }
 `;
 
@@ -50,7 +48,6 @@ Provide your analysis in the following JSON format ONLY — no extra text, no ma
     const result = await generateGeminiContent(prompt);
     const text = result.response.text().trim();
     
-    // Clean potential markdown packaging additions if injected by AI model
     const cleanJsonText = text.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
     const parsedAnalysis = JSON.parse(cleanJsonText);
 
@@ -105,6 +102,11 @@ export async function getATSAnalyses() {
  * Deletes a specific ATS analysis record (ownership-checked).
  */
 export async function deleteATSAnalysis(id) {
+  // Enforce parameter security validation to block malformed parameters or structural injections
+  if (!id || typeof id !== "string" || id.trim().length === 0) {
+    return { success: false, errors: { _form: ["Invalid analysis identifier format provided."] } };
+  }
+
   const { userId } = await auth();
   if (!userId) return { success: false, errors: { _form: ["Unauthorized"] } };
 
@@ -116,7 +118,7 @@ export async function deleteATSAnalysis(id) {
   try {
     await db.aTSAnalysis.delete({
       where: {
-        id,
+        id: id.trim(),
         userId: user.id,
       },
     });

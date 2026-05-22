@@ -1,4 +1,3 @@
-// app/resume/_components/entry-form.jsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -16,7 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { entrySchema } from "@/app/lib/schema";
-import { Sparkles, PlusCircle, X, Pencil, Save, Loader2, AlertTriangle } from "lucide-react";
+import { Sparkles, PlusCircle, X, Loader2 } from "lucide-react";
 import { improveWithAI } from "@/actions/resume";
 import { toast } from "sonner";
 import useFetch from "@/hooks/use-fetch";
@@ -127,7 +126,7 @@ export function EntryForm({ type, entries, onChange }) {
       {isAdding && (
         <Card className="border-2 border-primary/20">
           <CardHeader className="py-3">
-            <CardTitle className="text-sm font-semibold">
+            <CardTitle className="text-sm font-semibold text-left">
               Add {type} Details
             </CardTitle>
           </CardHeader>
@@ -231,7 +230,7 @@ export function EntryForm({ type, entries, onChange }) {
               variant="ghost"
               size="sm"
               onClick={handleImproveDescription}
-              disabled={isImproving || !watch("description")}
+              disabled={isImproving || !watch("description")?.trim()}
             >
               {isImproving ? (
                 <>
